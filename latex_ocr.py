@@ -2,39 +2,60 @@
 # create: @time: 10/8/23 11:47
 import argparse
 
-import torch
-from PIL import Image
-from transformers import VisionEncoderDecoderModel
+import torch, os, pyperclip
+from PIL import ImageGrab
+
+os.system("screencapture -i -c")
+image = ImageGrab.grabclipboard()
+
+import torch, pyperclip
 from transformers.models.nougat import NougatTokenizerFast
 from nougat_latex.util import process_raw_latex_code
-from nougat_latex import NougatLaTexProcessor
 
+parent_path = "/Users/bowen/Documents/Python/Gits/OCR"
 
 def parse_option():
     parser = argparse.ArgumentParser(prog="nougat inference config", description="model archiver")
     parser.add_argument("--pretrained_model_name_or_path", default="Norm/nougat-latex-base")
-    parser.add_argument("--img_path", help="path to latex image segment", required=True)
+    # parser.add_argument("--img_path", help="path to latex image segment", required=True)
     parser.add_argument("--device", default="gpu")
     return parser.parse_args()
 
 
-def run_nougat_latex():
+def run_nougat_latex(image = image):
     args = parse_option()
     # device
-    if args.device == "gpu":
-        device = torch.device("cuda:0")
-    else:
-        device = torch.device("cpu")
+    # if args.device == "gpu":
+    #     device = torch.device("cuda:0")
+    # else:
+    #     device = torch.device("cpu")
+    device = torch.device("mps")
 
     # init model
-    model = VisionEncoderDecoderModel.from_pretrained(args.pretrained_model_name_or_path).to(device)
+    model_path = os.path.join(parent_path, "nougat_model.pth")
+    processor_path = os.path.join(parent_path, "nougat_processor.pth")
+
+    if os.path.exists(model_path):
+        model = torch.load(model_path)
+    else:
+        from transformers import VisionEncoderDecoderModel
+        model = VisionEncoderDecoderModel.from_pretrained(args.pretrained_model_name_or_path).to(device)
+        torch.save(model, model_path)
+    if os.path.exists(processor_path):
+        latex_processor = torch.load(processor_path)
+    else:
+        from nougat_latex import NougatLaTexProcessor
+        latex_processor = NougatLaTexProcessor.from_pretrained(args.pretrained_model_name_or_path)
+        torch.save(latex_processor, processor_path)
+    # model = VisionEncoderDecoderModel.from_pretrained(args.pretrained_model_name_or_path).to(device)
 
     # init processor
     tokenizer = NougatTokenizerFast.from_pretrained(args.pretrained_model_name_or_path)
-    latex_processor = NougatLaTexProcessor.from_pretrained(args.pretrained_model_name_or_path)
+    # latex_processor = NougatLaTexProcessor.from_pretrained(args.pretrained_model_name_or_path)
 
     # run test
-    image = Image.open(args.img_path)
+    # from PIL import Image
+    # image = Image.open(args.img_path)
     if not image.mode == "RGB":
         image = image.convert('RGB')
 
@@ -60,6 +81,7 @@ def run_nougat_latex():
                                                                                                   "")
     sequence = process_raw_latex_code(sequence)
     print(sequence)
+    pyperclip.copy(sequence)
 
 
 if __name__ == '__main__':
