@@ -79,9 +79,9 @@ def run_nougat_latex(image = image):
     sequence = tokenizer.batch_decode(outputs.sequences)[0]
     sequence = sequence.replace(tokenizer.eos_token, "").replace(tokenizer.pad_token, "").replace(tokenizer.bos_token,
                                                                                                   "")
-    sequence = process_raw_latex_code(sequence)
-    print(sequence)
-    pyperclip.copy(sequence)
+    latex = "$%s$" %process_raw_latex_code(sequence)
+    print(latex)
+    pyperclip.copy(latex)
 
 
 if __name__ == '__main__':
